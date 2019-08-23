@@ -13,6 +13,8 @@ const chalk = require('chalk')
 // 交互式命令行,可在控制台提问
 const inquirer = require('inquirer')
 
+const shell = require('shelljs');
+
 const down = require('./down-project.js');
 
 program
@@ -42,9 +44,19 @@ program
       }
     ]).then(async answer => {
       const spinner = ora('Loading').start();
-      down(answer);
+      await down(answer);
       spinner.stop();
       console.log(chalk.green('模板生成成功'));
+      shell.cd(process.cwd() + '/' + answer.name);
+      const spinner1 = ora('Npm Installing \n').start();
+      
+      if (shell.exec('npm install').code !== 0) {//执行npm install 命令
+        shell.echo('Error: install failed');
+        shell.exit(1);
+      } else {
+        spinner1.stop();
+        console.log(chalk.green('依赖安装完成'));
+      }
     })
   })
 
