@@ -51,6 +51,7 @@ program
       const spinner1 = ora('Npm Installing \n').start();
       
       if (shell.exec('npm install').code !== 0) {//执行npm install 命令
+        spinner1.stop();
         shell.echo('Error: install failed');
         shell.exit(1);
       } else {
