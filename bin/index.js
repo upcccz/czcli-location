@@ -15,6 +15,8 @@ const inquirer = require('inquirer')
 
 const shell = require('shelljs');
 
+const logSymbols = require('log-symbols');
+
 const down = require('./down-project.js');
 
 program
@@ -29,7 +31,7 @@ program
         type: 'input',
         name: 'name',
         default: 'my-pro',
-        message: 'what\'s your project name'
+        message: 'Project name'
       },
       {
         type: 'input',
@@ -43,21 +45,37 @@ program
         message: 'Author'
       }
     ]).then(async answer => {
-      const spinner = ora('Loading').start();
+      const spinner = ora('downloading template').start();
       await down(answer);
-      spinner.stop();
-      console.log(chalk.green('模板生成成功'));
-      shell.cd(process.cwd() + '/' + answer.name);
-      const spinner1 = ora('Npm Installing \n').start();
-      
-      if (shell.exec('npm install').code !== 0) {//执行npm install 命令
-        spinner1.stop();
-        shell.echo('Error: install failed');
-        shell.exit(1);
-      } else {
-        spinner1.stop();
-        console.log(chalk.green('依赖安装完成'));
-      }
+      spinner.succeed();
+      console.log(logSymbols.success, chalk.green('download template successfully'));
+      inquirer.prompt([
+        {
+          type:'confirm',
+          name: 'isUseNpm',
+          message: 'Whether to install dependencies using npm install'
+        }
+      ]).then(answers => {
+        if (answers.isUseNpm) {
+          shell.cd(process.cwd() + '/' + answer.name);
+          const spinner1 = ora('Installing project dependencies ... \n').start();
+          
+          if (shell.exec('npm install').code !== 0) {//执行npm install 命令
+            spinner1.fail();
+            shell.echo('Error: install failed');
+            shell.exit(1);
+          } else {
+            spinner1.succeed();
+            console.log(logSymbols.success, chalk.green('installation completed'));
+            console.log();
+            console.log('To get started:');
+            console.log();
+            console.log(chalk.yellow(`   cd ${answer.name}`));
+            console.log(chalk.yellow('   npm run dev'));
+            console.log();
+          }
+        }
+      })
     })
   })
 
