@@ -2,6 +2,12 @@
 const fs = require('fs');
 // 操作文件
 const handlebars = require('handlebars');
+// 获取 thunk函数制造器
+const thunkify = require('thunkify');
+// thunk 化 readFile
+const read = thunkify(fs.readFile);
+// thunk 化 writeFile
+const write = thunkify(fs.writeFile);
 
 module.exports  = function (answers) {
   return new Promise((resolve) => {
@@ -25,32 +31,66 @@ module.exports  = function (answers) {
           fs.mkdirSync(currentPath + url.replace(templatePath, ''))
         }
         
-        fileArr.forEach((item, i) => {
-          (function(item, i){
+        // fileArr.forEach((item, i) => {
+        //   (function(item, i){
+        //     var writePath = currentPath + item[1].replace(templatePath, '');
+        //     fs.readFile(item[1], 'utf8', (err, data) => {
+        //       if (item[1].endsWith('package.json')) {
+        //         // 根据交互改写 package.json
+        //         var result = handlebars.compile(data)(answers);
+        //         fs.writeFile(writePath, result, function(err) {
+        //           if (err) {
+        //             console.log('创建文件 %s 失败', writePath, err);
+        //           }
+        //         });
+        //       } else {
+        //         // 正常写入其他文件
+        //         fs.writeFile(writePath, data, function(err) {
+        //           if (err) {
+        //             console.log('创建文件 %s 失败', writePath, err);
+        //           }
+        //           if (i === fileArr.length -1) {
+        //             resolve();
+        //           }
+        //         });
+        //       }
+        //     })
+        //   })(item, i)
+        // })
+
+        // 读写操作
+        function* readAndWrite() {
+          for(let i =0 ; i< fileArr.length ; i++) {
+            var item = fileArr[i];
             var writePath = currentPath + item[1].replace(templatePath, '');
-            fs.readFile(item[1], 'utf8', (err, data) => {
-              if (item[1].endsWith('package.json')) {
-                // 根据交互改写 package.json
-                var result = handlebars.compile(data)(answers);
-                fs.writeFile(writePath, result, function(err) {
-                  if (err) {
-                    console.log('创建文件 %s 失败', writePath, err);
-                  }
-                });
-              } else {
-                // 正常写入其他文件
-                fs.writeFile(writePath, data, function(err) {
-                  if (err) {
-                    console.log('创建文件 %s 失败', writePath, err);
-                  }
-                  if (i === fileArr.length -1) {
-                    resolve();
-                  }
-                });
-              }
-            })
-          })(item, i)
-        })
+            var data = yield read(item[1], 'utf8');
+            
+            if (item[1].endsWith('package.json')) {
+              // 根据交互改写 package.json
+              var result = handlebars.compile(data)(answers);
+              yield write(writePath, result)
+            } else {
+              // 正常写入其他文件
+              yield write(writePath, data)
+            }
+            if (i === fileArr.length -1) {
+              resolve();
+            }
+          }
+        }
+
+        function run(fn) {
+          var gen = fn();
+          function cb(err, data){
+            if(err) throw err;
+            var result = gen.next(data);
+            if(result.done) return
+            result.value(cb);
+          }
+          cb()
+        }
+        run(readAndWrite)
+
         // 搜集模板文件的所有文件地址，然后统一读写
         function addPath(path) {
           // 同步读取所有路径 返回一个数组
