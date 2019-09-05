@@ -9,6 +9,8 @@ const read = thunkify(fs.readFile);
 // thunk 化 writeFile
 const write = thunkify(fs.writeFile);
 
+const co = require('co');
+
 module.exports  = function (answers) {
   return new Promise((resolve) => {
       const { name } = answers;
@@ -90,6 +92,27 @@ module.exports  = function (answers) {
           cb()
         }
         run(readAndWrite)
+
+        // co(function* readAndWrite() {
+        //   for(let i =0 ; i< fileArr.length ; i++) {
+        //     var item = fileArr[i];
+        //     var writePath = currentPath + item[1].replace(templatePath, '');
+        //     var data = yield read(item[1], 'utf8');
+            
+        //     if (item[1].endsWith('package.json')) {
+        //       // 根据交互改写 package.json
+        //       var result = handlebars.compile(data)(answers);
+        //       yield write(writePath, result)
+        //     } else {
+        //       // 正常写入其他文件
+        //       yield write(writePath, data)
+        //     }
+        //     if (i === fileArr.length -1) {
+        //       console.log('读取完成');
+        //       resolve();
+        //     }
+        //   }
+        // })
 
         // 搜集模板文件的所有文件地址，然后统一读写
         function addPath(path) {
