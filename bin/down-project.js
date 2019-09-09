@@ -60,7 +60,46 @@ module.exports  = function (answers) {
         //   })(item, i)
         // })
 
-        // 读写操作
+        //  ============================================================
+        // 读写操作 使用Promise.all()
+
+        // function rAndW(readPath, writePath) {
+        //   return new Promise((res, rej) =>{
+        //     fs.readFile(readPath, 'utf8', (err, data) => {
+        //       if(err) throw err;
+        //       if (readPath.endsWith('package.json')) {
+        //         // 根据交互改写 package.json
+        //         var result = handlebars.compile(data)(answers);
+        //         res(result);
+        //       } else {
+        //         res(data);
+        //       }
+        //     })
+        //   }).then(data => {
+        //     return new Promise(resolve => {
+        //       fs.writeFile(writePath, data, err => {
+        //         if(err) throw err;
+        //         resolve()
+        //       })
+        //     })
+        //   })
+        // }
+
+        // const promises = fileArr.map((item) => {
+        //   let readPath = item[1];
+        //   let writePath = currentPath + item[1].replace(templatePath, '');
+        //   return rAndW(readPath, writePath)
+        // })
+
+        // Promise.all(promises).then(() => {
+        //   console.log();
+        //   console.log('全部读写成功');
+        //   resolve(new Date().getTime())
+        // })
+
+        //  ============================================================
+
+        // 读写操作 使用generator
         function* readAndWrite() {
           for(let i =0 ; i< fileArr.length ; i++) {
             var item = fileArr[i];
@@ -76,7 +115,7 @@ module.exports  = function (answers) {
               yield write(writePath, data)
             }
             if (i === fileArr.length -1) {
-              resolve();
+              resolve(new Date().getTime());
             }
           }
         }
@@ -92,6 +131,8 @@ module.exports  = function (answers) {
           cb()
         }
         run(readAndWrite)
+
+        // ====================================================
 
         // co(function* readAndWrite() {
         //   for(let i =0 ; i< fileArr.length ; i++) {

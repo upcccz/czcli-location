@@ -46,7 +46,10 @@ program
       }
     ]).then(async answer => {
       const spinner = ora('downloading template').start();
-      await down(answer);
+      const dateNow = new Date().getTime();
+      const dateEnd = await down(answer);
+      console.log();
+      console.log('花费了 %s 毫秒', dateEnd-dateNow);
       spinner.succeed();
       console.log(logSymbols.success, chalk.green('download template successfully'));
       inquirer.prompt([
