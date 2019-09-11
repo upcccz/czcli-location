@@ -60,77 +60,40 @@ module.exports  = function (answers) {
         //   })(item, i)
         // })
 
-        //  ============================================================
-        // 读写操作 使用Promise.all()
-
-        // function rAndW(readPath, writePath) {
-        //   return new Promise((res, rej) =>{
-        //     fs.readFile(readPath, 'utf8', (err, data) => {
-        //       if(err) throw err;
-        //       if (readPath.endsWith('package.json')) {
-        //         // 根据交互改写 package.json
-        //         var result = handlebars.compile(data)(answers);
-        //         res(result);
-        //       } else {
-        //         res(data);
-        //       }
-        //     })
-        //   }).then(data => {
-        //     return new Promise(resolve => {
-        //       fs.writeFile(writePath, data, err => {
-        //         if(err) throw err;
-        //         resolve()
-        //       })
-        //     })
-        //   })
-        // }
-
-        // const promises = fileArr.map((item) => {
-        //   let readPath = item[1];
-        //   let writePath = currentPath + item[1].replace(templatePath, '');
-        //   return rAndW(readPath, writePath)
-        // })
-
-        // Promise.all(promises).then(() => {
-        //   console.log();
-        //   console.log('全部读写成功');
-        //   resolve(new Date().getTime())
-        // })
-
-        //  ============================================================
+        // ===================================================
 
         // 读写操作 使用generator
-        function* readAndWrite() {
-          for(let i =0 ; i< fileArr.length ; i++) {
-            var item = fileArr[i];
-            var writePath = currentPath + item[1].replace(templatePath, '');
-            var data = yield read(item[1], 'utf8');
+        // function* readAndWrite() {
+        //   for(let i =0 ; i< fileArr.length ; i++) {
+        //     var item = fileArr[i];
+        //     var writePath = currentPath + item[1].replace(templatePath, '');
+        //     var data = yield read(item[1], 'utf8');
             
-            if (item[1].endsWith('package.json')) {
-              // 根据交互改写 package.json
-              var result = handlebars.compile(data)(answers);
-              yield write(writePath, result)
-            } else {
-              // 正常写入其他文件
-              yield write(writePath, data)
-            }
-            if (i === fileArr.length -1) {
-              resolve(new Date().getTime());
-            }
-          }
-        }
+        //     if (item[1].endsWith('package.json')) {
+        //       // 根据交互改写 package.json
+        //       var result = handlebars.compile(data)(answers);
+        //       yield write(writePath, result)
+        //     } else {
+        //       // 正常写入其他文件
+        //       yield write(writePath, data)
+        //     }
+        //     if (i === fileArr.length -1) {
+        //       resolve(new Date().getTime());
+        //     }
+        //   }
+        // }
 
-        function run(fn) {
-          var gen = fn();
-          function cb(err, data){
-            if(err) throw err;
-            var result = gen.next(data);
-            if(result.done) return
-            result.value(cb);
-          }
-          cb()
-        }
-        run(readAndWrite)
+        // function run(fn) {
+        //   var gen = fn();
+        //   function cb(err, data){
+        //     if(err) throw err;
+        //     var result = gen.next(data);
+        //     if(result.done) return
+        //     result.value(cb);
+        //   }
+        //   cb()
+        // }
+        // run(readAndWrite)
 
         // ====================================================
 
@@ -154,6 +117,135 @@ module.exports  = function (answers) {
         //     }
         //   }
         // })
+
+        //  ============================================================
+        // 读写操作 使用async await
+
+        // async function readAndWrite(readPath, writePath) {
+        //   try {
+        //     let readRes = await new Promise(resolve => {
+        //       fs.readFile(readPath, 'utf8', (err,data) => resolve(data))
+        //     })
+        //     if (readPath.endsWith('package.json')) {
+        //       // 根据交互改写 package.json
+        //       readRes = handlebars.compile(readRes)(answers);
+        //     }
+        //     fs.writeFile(writePath, readRes, err => {
+        //       return
+        //     });
+        //   } catch (error) {
+        //     console.log(error);
+        //   }
+        // }
+        
+        // async function run () {
+        //   for(let i =0, len = fileArr.length; i < len; i++) {
+        //     let readPath = fileArr[i][1];
+        //     let writePath = currentPath + readPath.replace(templatePath, '');
+        //     await readAndWrite(readPath, writePath)
+        //   }
+        // }
+        // run().then(() => {
+        //   resolve(new Date().getTime());
+        // });
+
+        //  ============================================================
+        // 使用Promise.all() 并发读写
+
+        async function readAndWrite(readPath, writePath) {
+          try {
+            let readRes = await new Promise(resolve => {
+              fs.readFile(readPath, 'utf8', (err,data) => resolve(data))
+            })
+            if (readPath.endsWith('package.json')) {
+              // 根据交互改写 package.json
+              readRes = handlebars.compile(readRes)(answers);
+            }
+            fs.writeFile(writePath, readRes, err => {
+              return
+            });
+          } catch (error) {
+            console.log(error);
+          }
+        }
+
+        const promises = fileArr.map((item) => {
+          let readPath = item[1];
+          let writePath = currentPath + item[1].replace(templatePath, '');
+          return readAndWrite(readPath, writePath)
+        })
+
+        Promise.all(promises).then(() => {
+          resolve(new Date().getTime())
+        })
+        //  ============================================================
+
+        //  ============================================================
+        // 使用异步 Generator 函数
+
+        // async function* readAndWrite() {
+        //   for (let i = 0, len = fileArr.length; i < len; i++) {
+        //     let readPath = fileArr[i][1];
+        //     let writePath = currentPath + readPath.replace(templatePath, '');
+        //     let readRes = await new Promise(resolve => {
+        //       fs.readFile(readPath, 'utf8', (err, data) => resolve(data))
+        //     })
+        //     if (readPath.endsWith('package.json')) {
+        //       // 根据交互改写 package.json
+        //       readRes = handlebars.compile(readRes)(answers);
+        //     }
+        //     yield fs.writeFile(writePath, readRes, err => {
+        //       return
+        //     });
+        //   }
+        // }
+        // async function run() {
+        //   for await (const key of readAndWrite()) {}
+        //   resolve(new Date().getTime())
+        // }
+        // run();
+
+        // async function run(asyncIterator) {
+        //   const it = asyncIterator();
+        //   while(true) {
+        //     const {done} = await it.next();
+        //     if(done) break;
+        //   }
+        //   resolve(new Date().getTime())
+        // }
+        // run(readAndWrite)
+
+        //  ============================================================
+        //  异步遍历器的并发
+        // async function* readAndWrite() {
+        //   for (let i = 0, len = fileArr.length; i < len; i++) {
+        //     let readPath = fileArr[i][1];
+        //     let writePath = currentPath + readPath.replace(templatePath, '');
+        //     let readRes = await new Promise(resolve => {
+        //       fs.readFile(readPath, 'utf8', (err, data) => resolve(data))
+        //     })
+        //     if (readPath.endsWith('package.json')) {
+        //       // 根据交互改写 package.json
+        //       readRes = handlebars.compile(readRes)(answers);
+        //     }
+        //     yield fs.writeFile(writePath, readRes, err => {
+        //       return
+        //     });
+        //   }
+        // }
+        // async function run() {
+        //   let it = readAndWrite();
+        //   for (let i = 0, len = fileArr.length; i < len; i++) {
+        //     if (i === fileArr.length -1) {
+        //       await it.return();
+        //       resolve(new Date().getTime());
+        //     } else {
+        //       it.next()
+        //     }
+        //   }
+        // }
+        // run();
+        //  ============================================================
 
         // 搜集模板文件的所有文件地址，然后统一读写
         function addPath(path) {
