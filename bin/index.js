@@ -25,7 +25,8 @@ program
   .command('init', 'a new project')
 
 program
-  .command('init').action(name => {
+  .command('init [templateName]').action(templateName => {
+    var templateName = templateName || 'template'
     inquirer.prompt([
       {
         type: 'input',
@@ -47,23 +48,23 @@ program
     ]).then(async answer => {
       const spinner = ora('downloading template').start();
       const dateNow = new Date().getTime();
-      const dateEnd = await down(answer);
+      const dateEnd = await down(answer, templateName);
       console.log();
-      console.log('花费了 %s 毫秒', dateEnd-dateNow);
+      console.log('It takes %s ms', dateEnd-dateNow);
       spinner.succeed();
       console.log(logSymbols.success, chalk.green('download template successfully'));
       inquirer.prompt([
         {
           type:'confirm',
           name: 'isUseNpm',
-          message: 'Whether to install dependencies using npm install'
+          message: 'Whether to install dependencies using cnpm install'
         }
       ]).then(answers => {
         if (answers.isUseNpm) {
           shell.cd(process.cwd() + '/' + answer.name);
           const spinner1 = ora('Installing project dependencies ... \n').start();
           
-          if (shell.exec('npm install').code !== 0) {//执行npm install 命令
+          if (shell.exec('cnpm install').code !== 0) {//执行cnpm install 命令
             spinner1.fail();
             shell.echo('Error: install failed');
             shell.exit(1);

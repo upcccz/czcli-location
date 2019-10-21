@@ -11,10 +11,12 @@ const write = thunkify(fs.writeFile);
 
 const co = require('co');
 
-module.exports  = function (answers) {
+var count = 0; // 计数
+
+module.exports  = function (answers, path) {
   return new Promise((resolve) => {
       const { name } = answers;
-      var templatePath = __dirname + '/' + '../template';
+      var templatePath = __dirname + '/' + '../' + path;
       var targetPath = './' + name;
       var arr = [];
       var currentPath  = process.cwd() + '/' + targetPath;
@@ -24,7 +26,6 @@ module.exports  = function (answers) {
         const fileArr = arr.filter(item => item[0] == 'file');
       
         // 先同步建好目录 在写入 避免写丢 目录没有无法正常写入
-      
         dirArr.forEach((item,i) => {
             mkDirFn(item[1]);
         })
@@ -32,33 +33,31 @@ module.exports  = function (answers) {
         function mkDirFn(url) {
           fs.mkdirSync(currentPath + url.replace(templatePath, ''))
         }
+
+        var counter = function () {
+          count++;
+          if (count == fileArr.length) {
+            resolve(new Date().getTime());
+          } 
+        }
         
-        // fileArr.forEach((item, i) => {
-        //   (function(item, i){
-        //     var writePath = currentPath + item[1].replace(templatePath, '');
-        //     fs.readFile(item[1], 'utf8', (err, data) => {
-        //       if (item[1].endsWith('package.json')) {
-        //         // 根据交互改写 package.json
-        //         var result = handlebars.compile(data)(answers);
-        //         fs.writeFile(writePath, result, function(err) {
-        //           if (err) {
-        //             console.log('创建文件 %s 失败', writePath, err);
-        //           }
-        //         });
-        //       } else {
-        //         // 正常写入其他文件
-        //         fs.writeFile(writePath, data, function(err) {
-        //           if (err) {
-        //             console.log('创建文件 %s 失败', writePath, err);
-        //           }
-        //           if (i === fileArr.length -1) {
-        //             resolve();
-        //           }
-        //         });
-        //       }
-        //     })
-        //   })(item, i)
-        // })
+        fileArr.forEach((item) => {
+          var writePath = currentPath + item[1].replace(templatePath, '');
+          fs.readFile(item[1], 'utf8', (err, data) => {
+            var data = data;
+            if (item[1].endsWith('package.json')) {
+              // 根据交互改写 package.json
+              data = handlebars.compile(data)(answers);
+            }
+            // 正常写入其他文件
+            fs.writeFile(writePath, data, function(err) {
+              if (err) {
+                console.log('创建文件 %s 失败', writePath, err);
+              }
+              counter();
+            });
+          })
+        })
 
         // ===================================================
 
@@ -152,32 +151,32 @@ module.exports  = function (answers) {
         //  ============================================================
         // 使用Promise.all() 并发读写
 
-        async function readAndWrite(readPath, writePath) {
-          try {
-            let readRes = await new Promise(resolve => {
-              fs.readFile(readPath, 'utf8', (err,data) => resolve(data))
-            })
-            if (readPath.endsWith('package.json')) {
-              // 根据交互改写 package.json
-              readRes = handlebars.compile(readRes)(answers);
-            }
-            fs.writeFile(writePath, readRes, err => {
-              return
-            });
-          } catch (error) {
-            console.log(error);
-          }
-        }
+        // async function readAndWrite(readPath, writePath) {
+        //   try {
+        //     let readRes = await new Promise(resolve => {
+        //       fs.readFile(readPath, 'utf8', (err,data) => resolve(data))
+        //     })
+        //     if (readPath.endsWith('package.json')) {
+        //       // 根据交互改写 package.json
+        //       readRes = handlebars.compile(readRes)(answers);
+        //     }
+        //     fs.writeFile(writePath, readRes, err => {
+        //       return
+        //     });
+        //   } catch (error) {
+        //     console.log(error);
+        //   }
+        // }
 
-        const promises = fileArr.map((item) => {
-          let readPath = item[1];
-          let writePath = currentPath + item[1].replace(templatePath, '');
-          return readAndWrite(readPath, writePath)
-        })
+        // const promises = fileArr.map((item) => {
+        //   let readPath = item[1];
+        //   let writePath = currentPath + item[1].replace(templatePath, '');
+        //   return readAndWrite(readPath, writePath)
+        // })
 
-        Promise.all(promises).then(() => {
-          resolve(new Date().getTime())
-        })
+        // Promise.all(promises).then(() => {
+        //   resolve(new Date().getTime())
+        // })
         //  ============================================================
 
         //  ============================================================
