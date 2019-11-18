@@ -46,13 +46,12 @@ program
         message: 'Author'
       }
     ]).then(async answer => {
-      const spinner = ora('downloading template').start();
-      const dateNow = new Date().getTime();
-      const dateEnd = await down(answer, templateName);
-      console.log();
-      console.log('It takes %s ms', dateEnd-dateNow);
-      spinner.succeed();
-      console.log(logSymbols.success, chalk.green('download template successfully'));
+      const spinner = ora('Downloading template').start();
+      console.log('');
+      console.time('It took');
+      await down(answer, templateName);
+      spinner.succeed('Download successfully');
+      console.timeEnd('It took');
       inquirer.prompt([
         {
           type:'confirm',

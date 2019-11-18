@@ -9,17 +9,19 @@ const read = thunkify(fs.readFile);
 // thunk 化 writeFile
 const write = thunkify(fs.writeFile);
 
+const path = require('path');
+
 const co = require('co');
 
 var count = 0; // 计数
 
-module.exports  = function (answers, path) {
+module.exports  = function (answers, templatePath) {
   return new Promise((resolve) => {
       const { name } = answers;
-      var templatePath = __dirname + '/' + '../' + path;
+      templatePath = path.join(__dirname, '../'+ templatePath);
       var targetPath = './' + name;
+      var currentPath  = path.join(process.cwd(), './'+ name);
       var arr = [];
-      var currentPath  = process.cwd() + '/' + targetPath;
       fs.mkdir(targetPath,  () => {
         addPath(templatePath);
         const dirArr = arr.filter(item => item[0] == 'dir');
@@ -37,7 +39,7 @@ module.exports  = function (answers, path) {
         var counter = function () {
           count++;
           if (count == fileArr.length) {
-            resolve(new Date().getTime());
+            resolve();
           } 
         }
         
@@ -77,7 +79,7 @@ module.exports  = function (answers, path) {
         //       yield write(writePath, data)
         //     }
         //     if (i === fileArr.length -1) {
-        //       resolve(new Date().getTime());
+        //       resolve();
         //     }
         //   }
         // }
@@ -145,7 +147,7 @@ module.exports  = function (answers, path) {
         //   }
         // }
         // run().then(() => {
-        //   resolve(new Date().getTime());
+        //   resolve();
         // });
 
         //  ============================================================
@@ -175,7 +177,7 @@ module.exports  = function (answers, path) {
         // })
 
         // Promise.all(promises).then(() => {
-        //   resolve(new Date().getTime())
+        //   resolve()
         // })
         //  ============================================================
 
@@ -200,7 +202,7 @@ module.exports  = function (answers, path) {
         // }
         // async function run() {
         //   for await (const key of readAndWrite()) {}
-        //   resolve(new Date().getTime())
+        //   resolve()
         // }
         // run();
 
@@ -210,7 +212,7 @@ module.exports  = function (answers, path) {
         //     const {done} = await it.next();
         //     if(done) break;
         //   }
-        //   resolve(new Date().getTime())
+        //   resolve()
         // }
         // run(readAndWrite)
 
@@ -237,7 +239,7 @@ module.exports  = function (answers, path) {
         //   for (let i = 0, len = fileArr.length; i < len; i++) {
         //     if (i === fileArr.length -1) {
         //       await it.return();
-        //       resolve(new Date().getTime());
+        //       resolve();
         //     } else {
         //       it.next()
         //     }
