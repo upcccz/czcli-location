@@ -1,5 +1,3 @@
-// 35ms 36ms 37ms 38ms 34ms
-
 // 文件模块
 const fs = require('fs');
 // 操作文件
@@ -7,7 +5,10 @@ const handlebars = require('handlebars');
 
 const path = require('path');
 
-var count = 0; // 计数
+// 将读写转为Promise
+const { promisify } = require('util');
+const readFilePromise = promisify(fs.readFile);
+const writeFilePromise = promisify(fs.writeFile);
 
 module.exports  = function (answers, templatePath) {
   return new Promise((resolve) => {
@@ -17,7 +18,6 @@ module.exports  = function (answers, templatePath) {
       var currentPath  = path.join(process.cwd(), './'+ name);
       var arr = [];
       fs.mkdir(targetPath,  () => {
-        // 区分文件夹和文件
         addPath(templatePath);
         const dirArr = arr.filter(item => item[0] == 'dir');
         const fileArr = arr.filter(item => item[0] == 'file');
@@ -30,31 +30,26 @@ module.exports  = function (answers, templatePath) {
         function mkDirFn(url) {
           fs.mkdirSync(currentPath + url.replace(templatePath, ''))
         }
-
-        // 读写操作
-        var counter = function () {
-          count++;
-          if (count == fileArr.length) {
-            resolve();
-          } 
-        }
         
-        fileArr.forEach((item) => {
+        // 读写
+        
+        fileArr.forEach((item, index) => {
           var writePath = currentPath + item[1].replace(templatePath, '');
-          fs.readFile(item[1], 'utf8', (err, data) => {
-            var data = data;
+          readFilePromise(item[1], 'utf8').then(data => {
             if (item[1].endsWith('package.json')) {
               // 根据交互改写 package.json
               data = handlebars.compile(data)(answers);
             }
-            // 正常写入其他文件
-            fs.writeFile(writePath, data, function(err) {
-              if (err) {
-                console.log('创建文件 %s 失败', writePath, err);
-              }
-              counter();
-            });
+            return data;
           })
+          .then(data => {
+            writeFilePromise(writePath, data).then(() => {
+              if(index === fileArr.length - 1) {
+                resolve();
+              }
+            })
+          })
+          .catch(console.log);
         })
 
         // 搜集模板文件的所有文件地址，然后统一读写

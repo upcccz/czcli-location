@@ -1,13 +1,13 @@
-// 35ms 36ms 37ms 38ms 34ms
-
 // 文件模块
 const fs = require('fs');
 // 操作文件
 const handlebars = require('handlebars');
 
-const path = require('path');
+const { promisify } = require('util');
+const readFilePromise = promisify(fs.readFile);
+const writeFilePromise = promisify(fs.writeFile);
 
-var count = 0; // 计数
+const path = require('path');
 
 module.exports  = function (answers, templatePath) {
   return new Promise((resolve) => {
@@ -17,7 +17,6 @@ module.exports  = function (answers, templatePath) {
       var currentPath  = path.join(process.cwd(), './'+ name);
       var arr = [];
       fs.mkdir(targetPath,  () => {
-        // 区分文件夹和文件
         addPath(templatePath);
         const dirArr = arr.filter(item => item[0] == 'dir');
         const fileArr = arr.filter(item => item[0] == 'file');
@@ -31,31 +30,38 @@ module.exports  = function (answers, templatePath) {
           fs.mkdirSync(currentPath + url.replace(templatePath, ''))
         }
 
-        // 读写操作
-        var counter = function () {
-          count++;
-          if (count == fileArr.length) {
-            resolve();
-          } 
-        }
-        
-        fileArr.forEach((item) => {
-          var writePath = currentPath + item[1].replace(templatePath, '');
-          fs.readFile(item[1], 'utf8', (err, data) => {
-            var data = data;
-            if (item[1].endsWith('package.json')) {
+        // 使用 异步Generator 函数
+        // async函数返回一个Promise对象，Generator函数返回一个同步遍历器对象，而异步Generator函数返回的是一个异步遍历器对象。
+        // 同步遍历器对象调用next方法，返回一个包含value和done属性的对象，
+        // 而异步遍历器对象调用next方法返回的是一个Promise对象，Promise被resolve时，成功回调的参数即value和done属性的对象，如果被reject，则直接抛出异常。
+
+        async function* readAndWrite() {
+          for (let i = 0, len = fileArr.length; i < len; i++) {
+            let readPath = fileArr[i][1];
+            let writePath = currentPath + readPath.replace(templatePath, '');
+            let data = await readFilePromise(readPath, 'utf8')
+            if (readPath.endsWith('package.json')) {
               // 根据交互改写 package.json
               data = handlebars.compile(data)(answers);
             }
-            // 正常写入其他文件
-            fs.writeFile(writePath, data, function(err) {
-              if (err) {
-                console.log('创建文件 %s 失败', writePath, err);
-              }
-              counter();
-            });
-          })
-        })
+            yield writeFilePromise(writePath, data);
+          }
+        }
+        async function run() {
+          for await (const key of readAndWrite()) {}
+          resolve()
+        }
+        run();
+
+        // async function run(asyncIterator) {
+        //   const it = asyncIterator();
+        //   while(true) {
+        //     const {done} = await it.next();
+        //     if(done) break;
+        //   }
+        //   resolve()
+        // }
+        // run(readAndWrite)
 
         // 搜集模板文件的所有文件地址，然后统一读写
         function addPath(path) {

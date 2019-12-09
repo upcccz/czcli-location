@@ -17,7 +17,7 @@ const shell = require('shelljs');
 
 const logSymbols = require('log-symbols');
 
-const down = require('./down-project.js');
+const down = require('./down-project4.js');
 
 program
   .version(require('../package').version)
