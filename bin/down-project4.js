@@ -11,7 +11,6 @@ const path = require('path');
 
 module.exports  = function (answers, templatePath) {
   return new Promise((resolve) => {
-      console.log('44444444');
       const { name } = answers;
       templatePath = path.join(__dirname, '../'+ templatePath);
       var targetPath = './' + name;

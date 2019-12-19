@@ -33,23 +33,23 @@ module.exports  = function (answers, templatePath) {
         
         // 读写
         
-        fileArr.forEach((item, index) => {
+        const promises = [];
+        fileArr.forEach(item => {
           var writePath = currentPath + item[1].replace(templatePath, '');
-          readFilePromise(item[1], 'utf8').then(data => {
+          promises.push(readFilePromise(item[1], 'utf8').then(data => {
             if (item[1].endsWith('package.json')) {
               // 根据交互改写 package.json
               data = handlebars.compile(data)(answers);
             }
             return data;
           })
-          .then(data => {
-            writeFilePromise(writePath, data).then(() => {
-              if(index === fileArr.length - 1) {
-                resolve();
-              }
-            })
-          })
-          .catch(console.log);
+          .then(data => writeFilePromise(writePath, data)))
+        });
+
+        Promise.all(promises).then(() => {
+          resolve();
+        }).catch(() => {
+          console.log('读写发生错误');
         })
 
         // 搜集模板文件的所有文件地址，然后统一读写
